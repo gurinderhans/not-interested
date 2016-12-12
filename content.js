@@ -1,4 +1,8 @@
 // `x` marked at (-296px -215px)
+
+/// global variables
+var lastVideoElementCount = 0;
+
 function findAncestor (el, sel) {
   while ((el = el.parentElement) && !((el.matches || el.matchesSelector).call(el,sel)));
   return el;
@@ -32,6 +36,26 @@ function makeNotInterestedButton() {
   return button;
 }
 
+function addNotInterstedButton() {
+  var videoElements = document.getElementsByClassName("yt-shelf-grid-item");
+  if (lastVideoElementCount < videoElements.length) {
+    for (var i = 0; i < videoElements.length; ++i) {
+      var thumbnail = videoElements[i].querySelector(".yt-lockup-thumbnail.contains-addto");
+
+      // don't add thumbnail if already added
+      if(thumbnail.getElementsByClassName("not-interested-action").length > 0) {
+        continue;
+      }
+
+      var notInterestedButton = makeNotInterestedButton();
+
+      thumbnail.appendChild(notInterestedButton);
+    }
+
+    lastVideoElementCount = videoElements.length;
+  }
+}
+
 function initExtension() {
   // add custom styles
   document.head.innerHTML += '<style type="text/css">\
@@ -46,14 +70,8 @@ function initExtension() {
     }\
     </style>';
 
-  var videoElements = document.getElementsByClassName("yt-shelf-grid-item");
-  for (var i = 0; i < videoElements.length; ++i) {
-    var thumbnail = videoElements[i].querySelector(".yt-lockup-thumbnail.contains-addto");
-
-    var notInterestedButton = makeNotInterestedButton();
-
-    thumbnail.appendChild(notInterestedButton);
-  }
+  //
+  setInterval(addNotInterstedButton, 500);
 }
 
 // add onto onload event for our own init process
