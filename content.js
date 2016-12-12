@@ -1,29 +1,66 @@
+/// on page load called when the page first loads into memory
+
+// [source]: http://stackoverflow.com/questions/9899372/pure-javascript-equivalent-to-jquerys-ready-how-to-call-a-function-when-the#answer-13456810
+window.readyHandlers = [];
+window.ready = function ready(handler) {
+  window.readyHandlers.push(handler);
+  handleState();
+};
+
+window.handleState = function handleState() {
+  if (['interactive', 'complete'].indexOf(document.readyState) > -1) {
+    while(window.readyHandlers.length > 0) {
+      (window.readyHandlers.shift())();
+    }
+  }
+};
+
+document.onreadystatechange = window.handleState;
+
+/// page register for when the page dynamically loads using javascript
+
+// [source]: http://stackoverflow.com/questions/18397962/chrome-extension-is-not-loading-on-browser-navigation-at-youtube#answer-18398921
+(document.body || document.documentElement).addEventListener('transitionend', function(event) {
+  if (event.propertyName === 'width' && event.target.id === 'progress') {
+    onPageLoad();
+  }
+}, true);
+
+window.ready(onPageLoad);
+
+
 /// global variables
 
-// keeps track of number of video elements
-// by their unique class names
+// keeps track of number of video elements by their unique class names
+// so that when adding our custom button we only do it when this number
+// has changed
 var videoElementCount = {};
 
 
-function findAncestor (el, sel) {
+/// helper function that finds the parent of and element with
+/// given selector
+
+// [source]: // TODO: find source
+function findAncestor(el, sel) {
   while ((el = el.parentElement) && !((el.matches || el.matchesSelector).call(el,sel)));
   return el;
 }
 
 function actionNotInterested(ev) {
   // find buttons parent wrapper element
-  var gridItem = findAncestor(ev.target, ".yt-lockup-dismissable");
+  // then search back down for the click button
+  var gridItem = findAncestor(ev.target, ev.target.getAttribute("max-parent-selector"));
 
-  var contentMenuButton = gridItem.querySelector(".yt-lockup-content >\
-                                                  .yt-uix-menu-container.yt-lockup-action-menu\
-                                                  ul > li > button");
+  var contentMenuButton = gridItem.querySelector(".yt-uix-menu-container ul > li > button");
   contentMenuButton.click();
 }
 
 // there were some troubles if I used raw string for building the button
 // when adding the onclick event, thats why there is this function
 // to generate the button, where we nicely attach onto the onclick event
-function makeNotInterestedButton() {
+
+// @param: maxParentSelector = max up we can go for each of the video boxes
+function makeNotInterestedButton(maxParentSelector) {
   var button = document.createElement("button");
 
   button.setAttribute("type",                 "button");
@@ -31,6 +68,8 @@ function makeNotInterestedButton() {
   button.setAttribute("title",                "Not Intersted");
   button.setAttribute("data-tooltip-text",    "Not Intersted");
   button.setAttribute("aria-labelledby",      "yt-uix-tooltip441-arialabel");
+
+  button.setAttribute("max-parent-selector",  maxParentSelector);
 
   button.className = "not-interested-action yt-uix-button yt-uix-button-size-small\
                       yt-uix-button-default yt-uix-button-empty yt-uix-button-has-icon\
@@ -41,61 +80,82 @@ function makeNotInterestedButton() {
   return button;
 }
 
-function addNotInterstedButtonWithClass(className) {
-  var videoElements = document.getElementsByClassName(className);
+function addNotInterestedToEl(
+  // selector of top-most-level video box
+  videoBoxSelector,
+  // selector of the box that we are adding the element into
+  insertIntoElSelector
+) {
+  try {
 
-  var lastCount = videoElementCount[className] || 0;
+    var lastCount = videoElementCount[videoBoxSelector] || 0;
 
-  if (lastCount < videoElements.length) {
+    var videoElements = document.querySelectorAll(videoBoxSelector);
+
+    if (lastCount == videoElements.length) {
+      return;
+    }
 
     for (var i = 0; i < videoElements.length; ++i) {
 
-      var thumbnail = videoElements[i].querySelector(".yt-lockup-thumbnail.contains-addto");
-
-      // don't add thumbnail if already added
-      if(thumbnail.getElementsByClassName("not-interested-action").length > 0) {
+      var insertEl = videoElements[i].querySelector(insertIntoElSelector);
+      if (insertEl.querySelector(".not-interested-action") !== null) {
         continue;
       }
 
-      var notInterestedButton = makeNotInterestedButton();
-
-      thumbnail.appendChild(notInterestedButton);
+      var notInterestedButton = makeNotInterestedButton(videoBoxSelector);
+      insertEl.appendChild(notInterestedButton);
     }
-
+    
     videoElementCount[className] = videoElements.length;
+
+  } catch (err) {
+    console.error(err);
   }
 }
 
-function initExtension() {
+
+function onPageLoad() {
+
   // add custom styles
   document.head.innerHTML += '<style type="text/css">\
-    .yt-lockup-thumbnail.contains-addto .not-interested-action {\
+    .not-interested-action {\
       height: 22px;\
       width: 22px;\
       padding: 0;\
       border-radius: 2px;\
     }\
-    .yt-lockup-thumbnail.contains-addto .not-interested-action::before {\
+    .not-interested-action::before {\
       background: no-repeat url(//s.ytimg.com/yts/imgbin/www-hitchhiker-vfllryam5.webp) -296px -215px;\
       background-size: auto;\
       width: 13px;\
       height: 13px;\
     }\
-    .yt-lockup-thumbnail.contains-addto:hover .not-interested-action {\
+    .contains-percent-duration-watched .not-interested-action {\
+      margin-bottom: 4px;\
+    }\
+    .yt-lockup-thumbnail.contains-addto:hover .not-interested-action,\
+    .related-list-item:hover .not-interested-action {\
       right: 26px;\
     }\
     </style>';
 
   // interval to take care of dynamically added elements
   setInterval(function() {
-    addNotInterstedButtonWithClass("expanded-shelf-content-item-wrapper");
-    addNotInterstedButtonWithClass("yt-shelf-grid-item");
-  }, 500);
+    addNotInterestedToEl(
+      ".expanded-shelf-content-item-wrapper",
+      ".yt-lockup-thumbnail"
+    );
+
+    addNotInterestedToEl(
+      ".yt-shelf-grid-item",
+      ".yt-lockup-thumbnail"
+    );
+
+    addNotInterestedToEl(
+      ".related-list-item",
+      ".thumb-wrapper"
+    );
+  }, 1000);
 }
 
-// add onto onload event for our own init process
-if (window.addEventListener) {
-  window.addEventListener('load', initExtension);
-} else {
-  window.attachEvent('onload', initExtension);
-}
