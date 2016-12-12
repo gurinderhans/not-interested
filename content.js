@@ -112,7 +112,9 @@ function addNotInterestedToEl(
 
 function onPageLoad() {
   console.log("load");
-
+  
+  /// FIXME: adding this causes entire page to repaint, which becomes visible
+  /// on a heavy site like youtube, best to inline styles ?
   // add custom styles
   document.head.innerHTML += '<style type="text/css">\
     .not-interested-action {\
@@ -136,6 +138,8 @@ function onPageLoad() {
     }\
     </style>';
 
+  // TODO: only call the timer when page is scrolling ?
+
   // interval to take care of dynamically added elements
   setInterval(function() {
     addNotInterestedToEl(
@@ -144,7 +148,7 @@ function onPageLoad() {
     );
 
     addNotInterestedToEl(
-      ".yt-shelf-grid-item",
+      ".yt-shelf-grid-item > .yt-lockup.yt-lockup-grid.yt-lockup-video",
       ".yt-lockup-thumbnail"
     );
 
@@ -152,6 +156,7 @@ function onPageLoad() {
       ".related-list-item",
       ".thumb-wrapper"
     );
+
   }, 1000);
 }
 
