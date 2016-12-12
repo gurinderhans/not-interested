@@ -1,7 +1,9 @@
-// `x` marked at (-296px -215px)
-
 /// global variables
-var lastVideoElementCount = 0;
+
+// keeps track of number of video elements
+// by their unique class names
+var videoElementCount = {};
+
 
 function findAncestor (el, sel) {
   while ((el = el.parentElement) && !((el.matches || el.matchesSelector).call(el,sel)));
@@ -18,6 +20,9 @@ function actionNotInterested(ev) {
   contentMenuButton.click();
 }
 
+// there were some troubles if I used raw string for building the button
+// when adding the onclick event, thats why there is this function
+// to generate the button, where we nicely attach onto the onclick event
 function makeNotInterestedButton() {
   var button = document.createElement("button");
 
@@ -36,10 +41,15 @@ function makeNotInterestedButton() {
   return button;
 }
 
-function addNotInterstedButton() {
-  var videoElements = document.getElementsByClassName("yt-shelf-grid-item");
-  if (lastVideoElementCount < videoElements.length) {
+function addNotInterstedButtonWithClass(className) {
+  var videoElements = document.getElementsByClassName(className);
+
+  var lastCount = videoElementCount[className] || 0;
+
+  if (lastCount < videoElements.length) {
+
     for (var i = 0; i < videoElements.length; ++i) {
+
       var thumbnail = videoElements[i].querySelector(".yt-lockup-thumbnail.contains-addto");
 
       // don't add thumbnail if already added
@@ -52,7 +62,7 @@ function addNotInterstedButton() {
       thumbnail.appendChild(notInterestedButton);
     }
 
-    lastVideoElementCount = videoElements.length;
+    videoElementCount[className] = videoElements.length;
   }
 }
 
@@ -65,13 +75,22 @@ function initExtension() {
       padding: 0;\
       border-radius: 2px;\
     }\
+    .yt-lockup-thumbnail.contains-addto .not-interested-action::before {\
+      background: no-repeat url(//s.ytimg.com/yts/imgbin/www-hitchhiker-vfllryam5.webp) -296px -215px;\
+      background-size: auto;\
+      width: 13px;\
+      height: 13px;\
+    }\
     .yt-lockup-thumbnail.contains-addto:hover .not-interested-action {\
       right: 26px;\
     }\
     </style>';
 
-  //
-  setInterval(addNotInterstedButton, 500);
+  // interval to take care of dynamically added elements
+  setInterval(function() {
+    addNotInterstedButtonWithClass("expanded-shelf-content-item-wrapper");
+    addNotInterstedButtonWithClass("yt-shelf-grid-item");
+  }, 500);
 }
 
 // add onto onload event for our own init process
