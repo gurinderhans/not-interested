@@ -1,5 +1,4 @@
 /// on page load called when the page first loads into memory
-
 // [source]: http://stackoverflow.com/questions/9899372/pure-javascript-equivalent-to-jquerys-ready-how-to-call-a-function-when-the#answer-13456810
 window.readyHandlers = [];
 window.ready = function ready(handler) {
@@ -18,7 +17,6 @@ window.handleState = function handleState() {
 document.onreadystatechange = window.handleState;
 
 /// page register for when the page dynamically loads using javascript
-
 // [source]: http://stackoverflow.com/questions/18397962/chrome-extension-is-not-loading-on-browser-navigation-at-youtube#answer-18398921
 (document.body || document.documentElement).addEventListener('transitionend', function(event) {
   if (event.propertyName === 'width' && event.target.id === 'progress') {
@@ -30,16 +28,13 @@ window.ready(onPageLoad);
 
 
 /// global variables
-
 // keeps track of number of video elements by their unique class names
 // so that when adding our custom button we only do it when this number
 // has changed
 var videoElementCount = {};
 
 
-/// helper function that finds the parent of and element with
-/// given selector
-
+/// helper function that finds the parent of and element with given selector
 // [source]: // TODO: find source
 function findAncestor(el, sel) {
   while ((el = el.parentElement) && !((el.matches || el.matchesSelector).call(el,sel)));
@@ -65,8 +60,8 @@ function makeNotInterestedButton(maxParentSelector) {
 
   button.setAttribute("type",                 "button");
   button.setAttribute("role",                 "button");
-  button.setAttribute("title",                "Not Intersted");
-  button.setAttribute("data-tooltip-text",    "Not Intersted");
+  button.setAttribute("title",                "Not Interested");
+  button.setAttribute("data-tooltip-text",    "Not Interested");
   button.setAttribute("aria-labelledby",      "yt-uix-tooltip441-arialabel");
 
   button.setAttribute("max-parent-selector",  maxParentSelector);
@@ -107,7 +102,7 @@ function addNotInterestedToEl(
       insertEl.appendChild(notInterestedButton);
     }
     
-    videoElementCount[className] = videoElements.length;
+    videoElementCount[videoBoxSelector] = videoElements.length;
 
   } catch (err) {
     console.error(err);
@@ -116,6 +111,7 @@ function addNotInterestedToEl(
 
 
 function onPageLoad() {
+  console.log("load");
 
   // add custom styles
   document.head.innerHTML += '<style type="text/css">\
