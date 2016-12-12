@@ -1,5 +1,5 @@
 # not-interested
-Easy way to tell Youtube, this video is not interesting to me!
+## Easy way to tell Youtube, this video is not interesting to me!
 
 ### \<before\>, 2 steps
 <img src="screenshots/before.png" />
