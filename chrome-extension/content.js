@@ -1,5 +1,5 @@
-/// on page load called when the page first loads into memory
-// [source]: http://stackoverflow.com/questions/9899372/pure-javascript-equivalent-to-jquerys-ready-how-to-call-a-function-when-the#answer-13456810
+/// MARK: on page load called when the page first loads into memory.
+/// Source: http://stackoverflow.com/questions/9899372/pure-javascript-equivalent-to-jquerys-ready-how-to-call-a-function-when-the#answer-13456810
 window.readyHandlers = [];
 window.ready = function ready(handler) {
   window.readyHandlers.push(handler);
@@ -16,8 +16,8 @@ window.handleState = function handleState() {
 
 document.onreadystatechange = window.handleState;
 
-/// page register for when the page dynamically loads using javascript
-// [source]: http://stackoverflow.com/questions/18397962/chrome-extension-is-not-loading-on-browser-navigation-at-youtube#answer-18398921
+/// MARK: page register for when the page dynamically loads using javascript.
+/// Source: http://stackoverflow.com/questions/18397962/chrome-extension-is-not-loading-on-browser-navigation-at-youtube#answer-18398921
 (document.body || document.documentElement).addEventListener('transitionend', function(event) {
   if (event.propertyName === 'width' && event.target.id === 'progress') {
     onPageLoad();
@@ -26,28 +26,44 @@ document.onreadystatechange = window.handleState;
 
 window.ready(onPageLoad);
 
+function elog(obj) {
+  console.info("[not-interested]::" + obj);
+}
 
-/// global variables
-// keeps track of number of video elements by their unique class names
-// so that when adding our custom button we only do it when this number
-// has changed
-var videoElementCount = {};
-
-
-/// helper function that finds the parent of and element with given selector
-// [source]: // TODO: find source
+/// Helper function that finds the parent of and element with given selector.
 function findAncestor(el, sel) {
   while ((el = el.parentElement) && !((el.matches || el.matchesSelector).call(el,sel)));
   return el;
 }
 
 function actionNotInterested(ev) {
+
+  ev.preventDefault();
+  ev.stopPropagation();
+
   // find buttons parent wrapper element
   // then search back down for the click button
   var gridItem = findAncestor(ev.target, ev.target.getAttribute("max-parent-selector"));
 
-  var contentMenuButton = gridItem.querySelector(".yt-uix-menu-container ul > li > button");
-  contentMenuButton.click();
+  var menuButton = gridItem.querySelector("#menu #button");
+  menuButton.click();
+
+  var popupRenderer = document.querySelector("ytd-menu-popup-renderer");
+  if (popupRenderer) {
+    popupRenderer.style.opacity=0;
+  }
+
+  setTimeout(function(){
+    document.querySelector("#items > div > ytd-menu-service-item-renderer:nth-child(1)").click();
+
+    if (popupRenderer) {
+      popupRenderer.style.display='none';
+      popupRenderer.style.opacity=1;
+    }
+
+  }, 10);
+  
+  return false;
 }
 
 // there were some troubles if I used raw string for building the button
@@ -56,24 +72,31 @@ function actionNotInterested(ev) {
 
 // @param: maxParentSelector = max up we can go for each of the video boxes
 function makeNotInterestedButton(maxParentSelector) {
+
   var button = document.createElement("button");
 
-  button.setAttribute("type",                 "button");
-  button.setAttribute("role",                 "button");
-  button.setAttribute("title",                "Not Interested");
-  button.setAttribute("data-tooltip-text",    "Not Interested");
-  button.setAttribute("aria-labelledby",      "yt-uix-tooltip441-arialabel");
+  button.setAttribute("role", "button");
+  button.setAttribute("tabindex", "1");
+  button.setAttribute("aria-label", "Not interested");
+
+  button.className = "not-interested-action style-scope ytd-thumbnail";
 
   button.setAttribute("max-parent-selector",  maxParentSelector);
 
-  button.className = "not-interested-action yt-uix-button yt-uix-button-size-small\
-                      yt-uix-button-default yt-uix-button-empty yt-uix-button-has-icon\
-                      no-icon-markup video-actions spf-nolink hide-until-delayloaded yt-uix-tooltip";
+  button.innerHTML=`
+    <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" focusable="false" class="style-scope yt-icon" style="pointer-events: none; display: block; width: 100%; height: 100%;">
+      <g class="style-scope yt-icon">
+        <line stroke-linecap="round" y2="7" x2="17" y1="17" x1="7" stroke-width="2.5" stroke="#fff" fill="#fff" />
+        <line stroke-linecap="round" y2="17" x2="17" y1="7" x1="7" stroke-width="2.5" stroke="#fff" fill="#fff" />
+      </g>
+    </svg>
+  `;
 
   button.onclick = actionNotInterested;
 
   return button;
 }
+
 
 function addNotInterestedToEl(
   // selector of top-most-level video box
@@ -83,15 +106,8 @@ function addNotInterestedToEl(
 ) {
   try {
 
-    var lastCount = videoElementCount[videoBoxSelector] || 0;
-
     var videoElements = document.querySelectorAll(videoBoxSelector);
-
-    if (lastCount == videoElements.length) {
-      return;
-    }
-
-    for (var i = 0; i < videoElements.length; ++i) {
+    for (var i=0; i<videoElements.length; ++i) {
 
       var insertEl = videoElements[i].querySelector(insertIntoElSelector);
       if (insertEl.querySelector(".not-interested-action") !== null) {
@@ -101,9 +117,6 @@ function addNotInterestedToEl(
       var notInterestedButton = makeNotInterestedButton(videoBoxSelector);
       insertEl.appendChild(notInterestedButton);
     }
-    
-    videoElementCount[videoBoxSelector] = videoElements.length;
-
   } catch (err) {
     console.error(err);
   }
@@ -111,52 +124,40 @@ function addNotInterestedToEl(
 
 
 function onPageLoad() {
-  console.log("load");
-  
-  /// FIXME: adding this causes entire page to repaint, which becomes visible
-  /// on a heavy site like youtube, best to inline styles ?
-  // add custom styles
-  document.head.innerHTML += '<style type="text/css">\
-    .not-interested-action {\
-      height: 22px;\
-      width: 22px;\
-      padding: 0;\
-      border-radius: 2px;\
-    }\
-    .not-interested-action::before {\
-      background: no-repeat url(//s.ytimg.com/yts/imgbin/www-hitchhiker-vfllryam5.webp) -296px -215px;\
-      background-size: auto;\
-      width: 13px;\
-      height: 13px;\
-    }\
-    .contains-percent-duration-watched .not-interested-action {\
-      margin-bottom: 4px;\
-    }\
-    .yt-lockup-thumbnail.contains-addto:hover .not-interested-action,\
-    .related-list-item:hover .not-interested-action {\
-      right: 26px;\
-    }\
-    </style>';
+  elog("Loaded");
 
-  // TODO: only call the timer when page is scrolling ?
-
-  // interval to take care of dynamically added elements
   setInterval(function() {
-    addNotInterestedToEl(
-      ".expanded-shelf-content-item-wrapper",
-      ".yt-lockup-thumbnail"
-    );
+    addNotInterestedToEl("ytd-grid-video-renderer", "#overlays");
+    addNotInterestedToEl("ytd-video-renderer", "#overlays");
+    addNotInterestedToEl("ytd-compact-autoplay-renderer", "#overlays");
+    addNotInterestedToEl("ytd-compact-video-renderer", "#overlays");
+  }, 2000);
 
-    addNotInterestedToEl(
-      ".yt-shelf-grid-item > .yt-lockup.yt-lockup-grid.yt-lockup-video",
-      ".yt-lockup-thumbnail"
-    );
+  document.head.innerHTML += `<style type="text/css">
+    .not-interested-action {
+      position: absolute;
+      top: 4px;
+      right: 40px;
+      width: 28px;
+      height: 28px;
+      background: black;
+      border: none;
+      border-radius: 2px;
+      padding: 0px;
+      cursor: pointer;
+      transition: opacity 0.3s;
+      visibility: hidden;
+      opacity: 0;
+    }
 
-    addNotInterestedToEl(
-      ".related-list-item",
-      ".thumb-wrapper"
-    );
-
-  }, 1000);
+    .style-scope.ytd-grid-video-renderer:hover .not-interested-action,
+    .style-scope.ytd-grid-video-renderer:hover .not-interested-action,
+    .style-scope.ytd-video-renderer:hover .not-interested-action,
+    .style-scope.ytd-compact-autoplay-renderer:hover .not-interested-action,
+    .style-scope.ytd-compact-video-renderer:hover .not-interested-action
+    {
+      visibility: visible;
+      opacity: 0.7;
+    }
+    </style>`;
 }
-
